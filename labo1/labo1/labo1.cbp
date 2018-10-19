@@ -11,6 +11,7 @@
 				<Option object_output="obj/Debug/" />
 				<Option type="1" />
 				<Option compiler="gcc" />
+				<Option parameters="-img1=/home/student/Desktop/BeeldInterpretatie/code/labo1/labo1/img/test.png  -img2=/home/student/Desktop/BeeldInterpretatie/code/labo1/labo1/img/testColor.png" />
 				<Compiler>
 					<Add option="-g" />
 				</Compiler>
@@ -31,6 +32,10 @@
 		<Compiler>
 			<Add option="-Wall" />
 		</Compiler>
+		<Linker>
+			<Add option="`pkg-config opencv --libs`" />
+		</Linker>
+		<Unit filename="src/Labo1.cpp" />
 		<Extensions>
 			<code_completion />
 			<debugger />
