@@ -1,0 +1,5 @@
+# depslib dependency file v1.0
+1539932932 source:/home/student/Desktop/BeeldInterpretatie/code/labo1/labo1/src/Labo1.cpp
+	<opencv2/opencv.hpp>
+	<iostream>
+
