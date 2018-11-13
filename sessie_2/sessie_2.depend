@@ -1,0 +1,8 @@
+# depslib dependency file v1.0
+1541754605 source:/home/student/2018_LaboBeeldinterpretatie_BramObbels/sessie_2/src/main.cpp
+	<opencv2/opencv.hpp>
+	"opencv2/core/core.hpp"
+	"opencv2/highgui/highgui.hpp"
+	"opencv2/imgproc/imgproc.hpp"
+	<iostream>
+
