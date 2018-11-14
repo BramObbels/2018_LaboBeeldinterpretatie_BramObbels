@@ -172,8 +172,6 @@ int main(int argc, const char ** argv){
     mask_1 = (R>150);
     mask_1 = mask_1 * 255;
 
-    imshow("huidskleur masker methode 1", mask_1);
-
     Mat finaal(image.rows, image.cols, CV_8UC3);
 
     Mat blauwe_pixels = B & mask_1;
@@ -188,21 +186,30 @@ int main(int argc, const char ** argv){
 
     merge(channels_mix, finaal);
 
-    imshow("huid", finaal);
+    imshow("opdracht 1: rgb", finaal);
 
 
     ///_________________________________OPDRACHT 2_____________________________________
     Mat image_HSV;
     Mat threshold_HSV;
+    Mat masker_1, masker_2;
     cvtColor(image, image_HSV, COLOR_BGR2HSV);
-    inRange(image_HSV, Scalar(160, 50, 50), Scalar(180, 255, 255), threshold_HSV);
-    imshow("hsv thresholded", threshold_HSV);
-    waitKey(0);
+    inRange(image_HSV, Scalar(170, 100, 100), Scalar(180, 255, 255), masker_1);
+    inRange(image_HSV, Scalar(0, 100, 100), Scalar(10, 255, 255), masker_2);
+
+    threshold_HSV = masker_1 | masker_2;
+
+    erode(threshold_HSV, threshold_HSV, Mat(), Point(-1,-1), 5);
+    dilate(threshold_HSV, threshold_HSV, Mat(), Point(-1,-1), 5);
+
+    Mat result;
+    image.copyTo(result,threshold_HSV);
+    imshow("opdracht 2: hsv", result);
+
 
     ///_________________________________OPDRACHT 3_____________________________________
-    Mat canvas = image.clone();
     vector<vector<Point>> contours;
-    findContours(image.clone(), contours, RETR_EXTERNAL, CHAIN_APPROX_NONE);
+    findContours(threshold_HSV.clone(), contours, RETR_EXTERNAL, CHAIN_APPROX_NONE);
 
     vector<Point> grootste_blob = contours[0];
     for(int i = 0; i < contours.size(); i++){
@@ -213,24 +220,13 @@ int main(int argc, const char ** argv){
 
     vector<vector<Point>> temp;
     temp.push_back(grootste_blob);
-    drawContours(mask_1, temp, -1, 255, -1);
 
-    blauwe_pixels = B & mask_1;
-    groene_pixels = G & mask_1;
-    rode_pixels = R & mask_1;
-
-    vector<Mat> channels_mix_2;
-
-    channels_mix_2.push_back(blauwe_pixels);
-    channels_mix_2.push_back(groene_pixels);
-    channels_mix_2.push_back(rode_pixels);
-
-    merge(channels_mix_2, finaal);
-
-    imshow("masker met hullen", finaal);
+    Mat contourcanvas(Mat(image.rows, image.cols, CV_8UC3));
+    drawContours(contourcanvas, temp, -1, Scalar(255,255,255), FILLED);
+    imshow("resultaat", contourcanvas);
     waitKey(0);
-
     ///_________________________________OPDRACHT 4_____________________________________
+
     namedWindow("HSV_trackbar");
     createTrackbar("Low H", "HSV_trackbar", &low_H, max_value_H, on_low_H_thresh_trackbar);
     createTrackbar("High H", "HSV_trackbar", &high_H, max_value_H, on_high_H_thresh_trackbar);
@@ -252,6 +248,7 @@ int main(int argc, const char ** argv){
             break;
         }
     }
+
     return 0;
 }
 
