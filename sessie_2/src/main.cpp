@@ -12,37 +12,32 @@ const int max_value_H = 360/2;
 const int max_value = 255;
 
 int low_H = 0, low_S = 0, low_V = 0;
-int high_H = max_value_H, high_S = max_value, high_V = max_value;
+int high_H = max_value_H, high_S = max_value, high_V = max_value; //instelbare variabelen voor trackbars
 
+//-------------callback functies voor trackbarvariabelen------------------
 static void on_low_H_thresh_trackbar(int, void *)
 {
     low_H = low_H;
-
 }
 static void on_high_H_thresh_trackbar(int, void *)
 {
     high_H = high_H;
-
 }
 static void on_low_S_thresh_trackbar(int, void *)
 {
     low_S = low_S;
-
 }
 static void on_high_S_thresh_trackbar(int, void *)
 {
     high_S = high_S;
-
 }
 static void on_low_V_thresh_trackbar(int, void *)
 {
     low_V = low_V;
-
 }
 static void on_high_V_thresh_trackbar(int, void *)
 {
     high_V = high_V;
-
 }
 
 
@@ -158,54 +153,64 @@ int main(int argc, const char ** argv){
 
     */
 
-    Mat image = sign3;
+    Mat image = sign1; // keuze van
     ///_________________________________OPDRACHT 1_____________________________________
 
-    vector<Mat> kanalen;
-    split(image, kanalen);
+    vector<Mat> kanalen; //vector om rgb kanalen apart in op te slaan
+    split(image, kanalen); //kanalen splitsen en opslaan in vector
 
-    Mat mask_1 = Mat::zeros(image.rows, image.cols, CV_8UC1);
-    Mat B = kanalen[0];
-    Mat G = kanalen[1];
-    Mat R = kanalen[2];
+    Mat mask_1, mask_2, mask_3 = Mat::zeros(image.rows, image.cols, CV_8UC1); //leeg masker maken van juiste grote
+    Mat B = kanalen[0]; // blauw kanaal
+    Mat G = kanalen[1]; // groen kanaal
+    Mat R = kanalen[2]; // blauw kanaal
 
-    mask_1 = (R>150);
-    mask_1 = mask_1 * 255;
+    mask_1 = (R>200)*255; //roodkanaal thresholden en, resutlaat is masker
 
     Mat finaal(image.rows, image.cols, CV_8UC3);
-
+    //masker toepassen op elk kanaal
     Mat blauwe_pixels = B & mask_1;
     Mat groene_pixels = G & mask_1;
     Mat rode_pixels = R & mask_1;
 
+    //kanalen terug samenvoegen
     vector<Mat> channels_mix;
-
     channels_mix.push_back(blauwe_pixels);
     channels_mix.push_back(groene_pixels);
     channels_mix.push_back(rode_pixels);
-
     merge(channels_mix, finaal);
 
-    imshow("opdracht 1: rgb", finaal);
+    //masker toepassen op beeld
+    Mat samen;
+    image.copyTo(samen,mask_1);
+    imshow("opdracht 1: rgb", samen);
+
+    ///        Wat zijn de voordelen?
+    ///         => Het is een simpele methode, en eenvoudig om te begrijpen
+    ///        Wat zijn de nadelen?
+    ///         => Het vinden van de juiste kleur in een rgb ruimte is moeilijk, schaduw maakt dit extra moeilijk
 
 
     ///_________________________________OPDRACHT 2_____________________________________
     Mat image_HSV;
     Mat threshold_HSV;
     Mat masker_1, masker_2;
-    cvtColor(image, image_HSV, COLOR_BGR2HSV);
-    inRange(image_HSV, Scalar(170, 100, 100), Scalar(180, 255, 255), masker_1);
-    inRange(image_HSV, Scalar(0, 100, 100), Scalar(10, 255, 255), masker_2);
+    cvtColor(image, image_HSV, COLOR_BGR2HSV); //beeld omzetten van rgb naar hsv ruimte
+    inRange(image_HSV, Scalar(170, 100, 100), Scalar(180, 255, 255), masker_1); //segmentatie van rood voor 180 graden
+    inRange(image_HSV, Scalar(0, 100, 100), Scalar(10, 255, 255), masker_2); //segmentatie van rood onder 180 graden
 
-    threshold_HSV = masker_1 | masker_2;
+    threshold_HSV = masker_1 | masker_2; //segmentaties samenvoegen
 
-    erode(threshold_HSV, threshold_HSV, Mat(), Point(-1,-1), 5);
-    dilate(threshold_HSV, threshold_HSV, Mat(), Point(-1,-1), 5);
+    erode(threshold_HSV, threshold_HSV, Mat(), Point(-1,-1), 5); // eroderen
+    dilate(threshold_HSV, threshold_HSV, Mat(), Point(-1,-1), 5); // dilateren
 
     Mat result;
     image.copyTo(result,threshold_HSV);
     imshow("opdracht 2: hsv", result);
 
+    ///        Wat zijn de voordelen?
+    ///         => Het is eenvoudiger om een bepaalde kleur(hue) te segmenteren. De resultaten zijn dan ook beter ondanks schaduw.
+    ///        Wat zijn de nadelen?
+    ///         => bij rood moet je 2 keer segmenteren omdat dit net op de 180 graden grens ligt
 
     ///_________________________________OPDRACHT 3_____________________________________
     vector<vector<Point>> contours;
@@ -222,12 +227,13 @@ int main(int argc, const char ** argv){
     temp.push_back(grootste_blob);
 
     Mat contourcanvas(Mat(image.rows, image.cols, CV_8UC3));
-    drawContours(contourcanvas, temp, -1, Scalar(255,255,255), FILLED);
+    drawContours(contourcanvas, temp, -1, Scalar(255,255,255), CV_FILLED);
     imshow("resultaat", contourcanvas);
     waitKey(0);
     ///_________________________________OPDRACHT 4_____________________________________
-
+    //window maken
     namedWindow("HSV_trackbar");
+    //trackbars maken en toevoegen aan window
     createTrackbar("Low H", "HSV_trackbar", &low_H, max_value_H, on_low_H_thresh_trackbar);
     createTrackbar("High H", "HSV_trackbar", &high_H, max_value_H, on_high_H_thresh_trackbar);
     createTrackbar("Low S", "HSV_trackbar", &low_S, max_value, on_low_S_thresh_trackbar);
@@ -236,6 +242,7 @@ int main(int argc, const char ** argv){
     createTrackbar("High V", "HSV_trackbar", &high_V, max_value, on_high_V_thresh_trackbar);
 
     imshow("HSV_trackbar", image);
+
     while (true) {
 
         cvtColor(image, image_HSV, COLOR_BGR2HSV);
