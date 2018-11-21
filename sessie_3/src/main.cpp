@@ -4,6 +4,8 @@
 using namespace std;
 using namespace cv;
 
+void meerdere_detectie(Mat beeld, Mat templ);
+void de_eerste_de_beste(Mat image, Mat templ);
 
 int main(int argc, const char ** argv){
 
@@ -73,21 +75,39 @@ int main(int argc, const char ** argv){
     }
 
 
-    //imshow(t, templ);
-    //imshow(i, image);
-    //imshow(irot, image_rotate);
 
+    waitKey(0);
+
+    ///////////////////////////////////////////////////////////////////////////////////
+    ////                                OPDRACHTEN                                  ///
+    ///////////////////////////////////////////////////////////////////////////////////
+    /*
+    Sessie 3 - template based matching
+
+    Kleur segmentatie en connected components brengen je maar tot een beperkte oplossing bij heel wat problemen. Daarom gaan we deze week een stap verder. Op een transportband in een industriele setup komen zowel metalen plaatjes als metalen ringen voorbij (zie input foto). De metalen plaatjes moeten gedetecteerd worden en gelabeld als in de output foto, zodanig dat een autonome robot deze van de band kan plukken. Hiervoor zullen we gebruik maken van template matching.
+
+    Opdracht 1: Gebruik template matching om een object te vinden in een inputbeeld
+    Opdracht 2: Pas de template matching aan om lokaal naar maxima te zoeken, zodanig dat je alle matches vind
+    Extra: Pas de template matching aan geroteerde objecten te vinden (roteren van beeld, rotatedRect, warpPerspective op hoekpunten)
+*/
+    //__________________________________Opdracht1_____________________________________
+    de_eerste_de_beste(image,templ);
+
+    //__________________________________Opdracht2_____________________________________
+    meerdere_detectie(image,templ);
+    return 0;
+}
+
+
+void de_eerste_de_beste(Mat image, Mat templ){
     Mat template_gray;
     Mat image_gray;
-    Mat image_rotate_gray;
 
     cvtColor(templ, template_gray, COLOR_BGR2GRAY);    //bimodal afbeelding omzettten naar grijswaarde
     cvtColor(image, image_gray, COLOR_BGR2GRAY);    //bimodal afbeelding omzettten naar grijswaarde
-    cvtColor(image_rotate, image_rotate_gray, COLOR_BGR2GRAY);    //bimodal afbeelding omzettten naar grijswaarde
 
-    imshow("gray template", template_gray);
-    imshow("gray testimage", image_gray);
-    imshow("gray testimage rotated", image_rotate_gray);
+    //imshow("gray template", template_gray);
+    //imshow("gray testimage", image_gray);
 
     Mat result;
 
@@ -104,56 +124,49 @@ int main(int argc, const char ** argv){
     Mat canvas_2 = image.clone();
     rectangle( canvas, minLoc, Point( minLoc.x + templ.cols , minLoc.y + templ.rows ), Scalar::all(0), 2, 8, 0 );
 
-    imshow("matching result", result);
-    imshow("vind 1 locatie met minMaxLoc", canvas);
-
-    Mat result_threshold;
-    result_threshold.create( result.rows, result.cols, CV_32SC1);
-    threshold(result, result_threshold, 0.1, 255, THRESH_BINARY_INV);
-
-
-    imshow("threshold", result_threshold);
-    vector<vector<Point>> contouren;
-    findContours(result_threshold.clone(), contouren, RETR_EXTERNAL, CHAIN_APPROX_NONE);
-    for(int i = 0; i < contouren.size(); i++){
-        Rect region = boundingRect(contouren[i]);
-        Mat temp = result(region);
-        Point  maxLoc;
-        minMaxLoc(temp, NULL, NULL, &minLoc, NULL);
-        rectangle(canvas_2, Point(region.x + minLoc.x, region.y + minLoc.y), Point(minLoc.x +region.x + templ.cols, region.y + minLoc.y + templ.rows), Scalar::all(0), 2, 8, 0 );
-    }
-
-    imshow("threshold", result_threshold);
-
+    //imshow("matching result", result);
+    imshow("opdracht_2", canvas);
     waitKey(0);
-
-    ///////////////////////////////////////////////////////////////////////////////////
-    ////                                OPDRACHTEN                                  ///
-    ///////////////////////////////////////////////////////////////////////////////////
-    /*
-
-    Sessie 2 - colour space manipulation
-
-    Omdat autonome wagens heel erg in de opmars zijn willen we dat deze wagens zich ook
-    aan de verkeersregels houden zoals de maximaal toegelaten snelheid. Hiervoor gaan
-    we een camera in de auto monteren en een computer die verkeersborden zal detecteren
-    en analyseren. Jouw opdracht is een stukje software schrijven om de rode
-    verkeersborden te filteren van de achtergrond zodat deze later kunnen geanalyseerd
-    worden.
-
-    Opdracht 1: Segmenteer de verkeersborden in de BGR kleurenruimte
-        Wat zijn de voordelen?
-        Wat zijn de nadelen?
-    Opdracht 2: Segmenteer de verkeersborden in de HSV kleurenruimte
-        Wat zijn de voordelen?
-        Wat zijn de nadelen?
-    Opdracht 3: Gebruik connected component analyse om enkel het stopbord over te houden
-    Opdracht 4: Gebruik een trackbar om de optimale threshold waardes te bepalen
-
-
-    */
-
-
-    return 0;
 }
 
+
+void meerdere_detectie(Mat beeld, Mat templ){
+    Mat canvas = beeld.clone();
+    Mat template_gray;
+    Mat image_gray;
+    Mat match_result;
+
+    double minimum;
+    double maximum;
+
+    double thresholdwaarde = 0.85;
+
+    cvtColor(templ, template_gray, COLOR_BGR2GRAY);    // afbeelding omzettten naar grijswaarde
+    cvtColor(beeld, image_gray, COLOR_BGR2GRAY);    // afbeelding omzettten naar grijswaarde
+    matchTemplate(image_gray, template_gray, match_result, TM_CCORR_NORMED);
+    normalize(match_result, match_result, 0, 1, NORM_MINMAX, -1, Mat());
+
+    minMaxLoc(match_result, &minimum, &maximum);
+
+    Mat match_result_threshold = Mat::zeros(Size(beeld.cols, beeld.rows), CV_32FC1);
+    inRange(match_result, maximum * thresholdwaarde, maximum, match_result_threshold);
+    match_result_threshold.convertTo(match_result_threshold, CV_8UC1);
+
+    vector<vector<Point>> contouren;
+    findContours(match_result_threshold, contouren, RETR_EXTERNAL, CHAIN_APPROX_NONE);
+    for(int i = 0; i < contouren.size(); i++){
+        vector<Point> hulls;
+        convexHull(contouren[i], hulls);
+        Rect rect = boundingRect(hulls);
+
+        Point locatie;
+        minMaxLoc(match_result_threshold(rect), NULL, NULL, NULL, &locatie);
+
+
+        Point p(locatie.x + rect.x, locatie.y + rect.y);
+        rectangle(canvas, p, Point(p.x + templ.cols, p.y + templ.rows), Scalar(0, 255, 0));
+
+    }
+    imshow("opdracht_2", canvas);
+    waitKey(0);
+}
