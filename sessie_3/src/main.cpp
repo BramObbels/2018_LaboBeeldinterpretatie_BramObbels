@@ -111,17 +111,19 @@ void de_eerste_de_beste(Mat image, Mat templ){
 
     Mat result;
 
-    /// Do the Matching and Normalize
+    // vind een heatmap dat de beste corelaties met het template weergeeft
     matchTemplate( image_gray, template_gray, result, TM_CCORR);
-    normalize( result, result, 0, 1, NORM_MINMAX, -1, Mat() );
+    normalize( result, result, 0, 1, NORM_MINMAX, -1, Mat() ); //normalizeer
 
+    //inverteer ()
     result = 1-result;
 
+    //zoek het minimum, max en de coresponderende punten
     double minVal; double maxVal; Point minLoc; Point maxLoc;
     minMaxLoc(result, &minVal, &maxVal, &minLoc, &maxLoc, Mat());
 
+    //teken boundingbox op canvas
     Mat canvas = image.clone();
-    Mat canvas_2 = image.clone();
     rectangle( canvas, minLoc, Point( minLoc.x + templ.cols , minLoc.y + templ.rows ), Scalar::all(0), 2, 8, 0 );
 
     //imshow("matching result", result);
@@ -143,11 +145,13 @@ void meerdere_detectie(Mat beeld, Mat templ){
 
     cvtColor(templ, template_gray, COLOR_BGR2GRAY);    // afbeelding omzettten naar grijswaarde
     cvtColor(beeld, image_gray, COLOR_BGR2GRAY);    // afbeelding omzettten naar grijswaarde
+
+    // vind een heatmap dat de beste corelaties met het template weergeeft
     matchTemplate(image_gray, template_gray, match_result, TM_CCORR_NORMED);
-    normalize(match_result, match_result, 0, 1, NORM_MINMAX, -1, Mat());
-
+    normalize(match_result, match_result, 0, 1, NORM_MINMAX, -1, Mat()); //normalizeer
+    //vind de minimum en en maximum waarde maximum in deze heatmap
     minMaxLoc(match_result, &minimum, &maximum);
-
+    //trhreshold aan de hand van dit maximum
     Mat match_result_threshold = Mat::zeros(Size(beeld.cols, beeld.rows), CV_32FC1);
     inRange(match_result, maximum * thresholdwaarde, maximum, match_result_threshold);
     match_result_threshold.convertTo(match_result_threshold, CV_8UC1);
@@ -155,14 +159,14 @@ void meerdere_detectie(Mat beeld, Mat templ){
     vector<vector<Point>> contouren;
     findContours(match_result_threshold, contouren, RETR_EXTERNAL, CHAIN_APPROX_NONE);
     for(int i = 0; i < contouren.size(); i++){
+        //vind een vierkant dat rond de contour past
         vector<Point> hulls;
         convexHull(contouren[i], hulls);
         Rect rect = boundingRect(hulls);
-
+        //vind het locale maximum van het template resultaat maar dan binnen deze vierkant
         Point locatie;
-        minMaxLoc(match_result_threshold(rect), NULL, NULL, NULL, &locatie);
-
-
+        minMaxLoc(match_result(rect), NULL, NULL, NULL, &locatie);
+        //teken rond punt een vrierkant even groot als het template beeld
         Point p(locatie.x + rect.x, locatie.y + rect.y);
         rectangle(canvas, p, Point(p.x + templ.cols, p.y + templ.rows), Scalar(0, 255, 0));
 
