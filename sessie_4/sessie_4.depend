@@ -1,0 +1,8 @@
+# depslib dependency file v1.0
+1543425298 source:/home/bram/2018_LaboBeeldinterpretatie_BramObbels/sessie_4/src/main.cpp
+	<opencv2/opencv.hpp>
+	<opencv2/features2d/features2d.hpp>
+	<opencv2/features2d.hpp>
+	<opencv2/imgcodecs.hpp>
+	<iostream>
+

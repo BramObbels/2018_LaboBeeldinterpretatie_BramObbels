@@ -1,13 +1,15 @@
 #include <opencv2/opencv.hpp>
+#include<opencv2/features2d/features2d.hpp>
 #include <opencv2/features2d.hpp>
 #include <opencv2/imgcodecs.hpp>
+#include <opencv2/imgproc/imgproc_c.h>
 #include <iostream>
 
 using namespace std;
 using namespace cv;
 
 const float inlier_threshold = 2.5f; // Distance threshold to identify inliers
-const float nn_match_ratio = 0.8f;   // Nearest neighbor matching r
+const float nn_match_ratio = 0.9f;   // Nearest neighbor matching r
 
 int main(int argc, const char ** argv){
 
@@ -114,85 +116,107 @@ int main(int argc, const char ** argv){
 
     Mat object = kinder_voorbeeld; // keuze van
     Mat beeld = kinder_testbeeld; // keuze van
+
+
     ///_________________________________OPDRACHT 1_____________________________________
+    //vectoren van keypoints, voor elk detectietype 1
+    vector<KeyPoint> object_keypoints_AKAZE, beeld_keypoints_AKAZE;
+    vector<KeyPoint> object_keypoints_ORB, beeld_keypoints_ORB;
+    vector<KeyPoint> object_keypoints_BRISK, beeld_keypoints_BRISK;
 
-    //detecteren en bechrijven van keypoints
-    vector<KeyPoint> object_keypoints, beeld_keypoints;
-    Mat object_desc, beeld_desc;
+    //descriptoren van de keypoints, voor elk type 1
+    Mat object_desc_AKAZE, beeld_desc_AKAZE;
+    Mat object_desc_ORB, beeld_desc_ORB;
+    Mat object_desc_BRISK, beeld_desc_BRISK;
+
+    // objecten die in staat zijn om keypoint en descriptoren te vinden/genereren, van elk type 1
     Ptr<AKAZE> akaze = AKAZE::create();
-    akaze->detectAndCompute(object, noArray(), object_keypoints, object_desc);
-    akaze->detectAndCompute(beeld, noArray(), beeld_keypoints, beeld_desc);
-    Mat object_canvas = object.clone();
-    Mat beeld_canvas = beeld.clone();
-    drawKeypoints(beeld, beeld_keypoints, beeld_canvas, Scalar(255,0,0));
-    drawKeypoints(object, object_keypoints, object_canvas, Scalar(255,0,0));
-    imshow("Keypoints in testbeeld",beeld_canvas);
-    imshow("Keypoints in object",object_canvas);
+    Ptr<ORB> orb = ORB::create();
+    Ptr<BRISK> brisk = BRISK::create();
+
+    // Vinden van keypoints en descriptoren voor beeld en object;
+    akaze->detectAndCompute(object, noArray(), object_keypoints_AKAZE, object_desc_AKAZE);
+    akaze->detectAndCompute(beeld, noArray(), beeld_keypoints_AKAZE, beeld_desc_AKAZE);
+    orb->detectAndCompute(object, noArray(), object_keypoints_ORB, object_desc_ORB);
+    orb->detectAndCompute(beeld, noArray(), beeld_keypoints_ORB, beeld_desc_ORB);
+    brisk->detectAndCompute(object, noArray(), object_keypoints_BRISK, object_desc_BRISK);
+    brisk->detectAndCompute(beeld, noArray(), beeld_keypoints_BRISK, beeld_desc_BRISK);
+
+    // canvasen om gevonden keypoints op te tekenen
+    Mat object_canvas_AKAZE, object_canvas_ORB, object_canvas_BRISK = object.clone();
+    Mat beeld_canvas_AKAZE, beeld_canvas_ORB, beeld_canvas_BRISK = beeld.clone();
+
+    // tekennen van de gevonden keypoints
+    drawKeypoints(beeld, beeld_keypoints_AKAZE, beeld_canvas_AKAZE, Scalar(255,0,0));
+    drawKeypoints(object, object_keypoints_AKAZE, object_canvas_AKAZE, Scalar(255,0,0));
+    drawKeypoints(beeld, beeld_keypoints_ORB, beeld_canvas_ORB, Scalar(255,0,0));
+    drawKeypoints(object, object_keypoints_ORB, object_canvas_ORB, Scalar(255,0,0));
+    drawKeypoints(beeld, beeld_keypoints_BRISK, beeld_canvas_BRISK, Scalar(255,0,0));
+    drawKeypoints(object, object_keypoints_BRISK, object_canvas_BRISK, Scalar(255,0,0));
+
+    //resultaat tonen
+    imshow("Keypoints in testbeeld (AKAZE)",beeld_canvas_AKAZE);
+    imshow("Keypoints in object (AKAZE)",object_canvas_AKAZE);
+    waitKey(0);
+    imshow("Keypoints in testbeeld (ORB)",beeld_canvas_ORB);
+    imshow("Keypoints in object (ORB)",object_canvas_ORB);
+    waitKey(0);
+    imshow("Keypoints in testbeeld (BRISK)",beeld_canvas_BRISK);
+    imshow("Keypoints in object (BRISK)",object_canvas_BRISK);
+    waitKey(0);
+
+
+
+
+
+
+    ///_________________________________OPDRACHT 2_____________________________________
     // brute force matching
-    BFMatcher matcher(NORM_HAMMING);
-    vector<vector<DMatch>> nn_matches;
-    matcher.knnMatch(object_desc, beeld_desc, nn_matches, 2);
+    //vector die de matches bewaart en met elkaar koppeld
+    vector<DMatch> matches;
+
+    //object dat in staat is om correcte matches te vinden
+    BFMatcher matcher(NORM_L2); //euclidische afstand wordt gebruikt (werkt enkel voor ORB descriptoren)
+    matcher.match(object_desc_ORB, beeld_desc_ORB, matches); // matches zoeken en bewaren in matches
+
+    Mat matches_canvas; //canvas om de gevondne matches op te tekenen
+    drawMatches(object, object_keypoints_ORB, beeld, beeld_keypoints_ORB, matches, matches_canvas); // geeft een mooie weergave terug van de gevondne matches tussen het object en het beeld
+
+    sort(matches.begin(), matches.end()); //sorteer de gevonden matches. de beste matches worden de eerste
+    const int beste_matches_procent = matches.size() * 0.2; // berenken wat de 20 procent beste matches zijn
+    matches.erase(matches.begin()+beste_matches_procent, matches.end()); // verwijder al de rest
 
 
-    vector<KeyPoint> object_matched, beeld_matched, object_inliers, beeld_inliers;
-    vector<DMatch> good_matches;
-    for(size_t i = 0; i < nn_matches.size(); i++) {
-        DMatch first = nn_matches[i][0];
-        float dist1 = nn_matches[i][0].distance;
-        float dist2 = nn_matches[i][1].distance;
-
-        if(dist1 < nn_match_ratio * dist2) {
-            beeld_matched.push_back(beeld_keypoints[first.queryIdx]);
-            object_matched.push_back(object_keypoints[first.trainIdx]);
-        }
+    ///_________________________________OPDRACHT 3_____________________________________
+    //de locaties vand e beste matches bepalen
+    vector<Point2f> object_match_posities, beeld_match_posities; //punten van de beste matches
+    for(int i = 0; i < matches.size(); i++){
+        object_match_posities.push_back(object_keypoints_ORB[matches[i].queryIdx].pt);
+        beeld_match_posities.push_back(beeld_keypoints_ORB[matches[i].trainIdx].pt);
     }
+    //ransac toepassen om de homography te bepalen tussen beeld en object
+    Mat ransac = findHomography(object_match_posities, beeld_match_posities, RANSAC);
+    //hoeken van object afbeelding in een vector steken
+    vector<Point2f> object_hoeken(4);
+    vector<Point2f> beeld_hoeken(4);
+    object_hoeken[0] = cvPoint(0,0);
+    object_hoeken[1] = cvPoint(object.cols,0);
+    object_hoeken[2] = cvPoint(object.cols,object.rows);
+    object_hoeken[3] = cvPoint(0,object.rows);
+    // homografische transformatie toepassen op de hoekpunten van het objectbeeld op het beeld
+    perspectiveTransform(object_hoeken, beeld_hoeken, ransac);
+    //tekenen van gevonden kader na transformatie
+    line(matches_canvas, beeld_hoeken[0] + Point2f(object.cols, 0), beeld_hoeken[1] +Point2f(object.cols,0), Scalar(255,0,0), 8);
+    line(matches_canvas, beeld_hoeken[1] + Point2f(object.cols, 0), beeld_hoeken[2] +Point2f(object.cols,0), Scalar(255,0,0), 8);
+    line(matches_canvas, beeld_hoeken[2] + Point2f(object.cols, 0), beeld_hoeken[3] +Point2f(object.cols,0), Scalar(255,0,0), 8);
+    line(matches_canvas, beeld_hoeken[3] + Point2f(object.cols, 0), beeld_hoeken[0] +Point2f(object.cols,0), Scalar(255,0,0), 8);
+    //toon resulaat
+    imshow("matches", matches_canvas);
 
-    //drawKeypoints(object, object_matched, object, Scalar(255,0,0));
-    //imshow("good matches in testbeeld",object);
-    vector<Point2f> object_keypoint_positie;
-    vector<Point2f> beeld_keypoint_positie;
-    for(size_t i = 0; i<good_matches.size(); i++){
-        object_keypoint_positie.push_back(object_keypoints[good_matches[i].queryIdx].pt);
-        beeld_keypoint_positie.push_back(beeld_keypoints[good_matches[i].queryIdx].pt);
-    }
-    //check het aantal punten, voor Akaze zijn er soms te weinig
-    findHomography(object_keypoint_positie, beeld_keypoint_positie, RANSAC);
-    /*
-    for(unsigned i = 0; i < object_matched.size(); i++) {
-        Mat col = Mat::ones(3, 1, CV_64F);
-        col.at<double>(0) = object_matched[i].pt.x;
-        col.at<double>(1) = object_matched[i].pt.y;
-
-        col = homography * col;
-        col /= col.at<double>(2);
-        double dist = sqrt( pow(col.at<double>(0) - beeld_matched[i].pt.x, 2) +
-                            pow(col.at<double>(1) - beeld_matched[i].pt.y, 2));
-
-        if(dist < inlier_threshold) {
-            int new_i = static_cast<int>(inliers1.size());
-            inliers1.push_back(object_matched[i]);
-            inliers2.push_back(beeld_matched[i]);
-            good_matches.push_back(DMatch(new_i, new_i, 0));
-        }
-    }
-
-    Mat res;
-    drawMatches(img1, inliers1, img2, inliers2, good_matches, res);
-    imwrite("res.png", res);
-
-    double inlier_ratio = inliers1.size() * 1.0 / matched1.size();
-    cout << "A-KAZE Matching Results" << endl;
-    cout << "*******************************" << endl;
-    cout << "# Keypoints 1:                        \t" << kpts1.size() << endl;
-    cout << "# Keypoints 2:                        \t" << kpts2.size() << endl;
-    cout << "# Matches:                            \t" << matched1.size() << endl;
-    cout << "# Inliers:                            \t" << inliers1.size() << endl;
-    cout << "# Inliers Ratio:                      \t" << inlier_ratio << endl;
-    cout << endl;
-    */
 
     waitKey(0);
 
     return 0;
+    //voor akaze zie deze link obbels
     //https://docs.opencv.org/3.0-beta/doc/tutorials/features2d/akaze_matching/akaze_matching.html
 }

@@ -11,7 +11,7 @@
 				<Option object_output="obj/Debug/" />
 				<Option type="1" />
 				<Option compiler="gcc" />
-				<Option parameters="-temp=/home/student/2018_LaboBeeldinterpretatie_BramObbels/sessie_3/img/template.jpg  -img=/home/student/2018_LaboBeeldinterpretatie_BramObbels/sessie_3/img/recht.jpg  -img_rot=/home/student/2018_LaboBeeldinterpretatie_BramObbels/sessie_3/img/rot.jpg" />
+				<Option parameters="-temp=/home/bram/2018_LaboBeeldinterpretatie_BramObbels/sessie_3/img/template.jpg  -img=/home/bram/2018_LaboBeeldinterpretatie_BramObbels/sessie_3/img/recht.jpg  -img_rot=/home/bram/2018_LaboBeeldinterpretatie_BramObbels/sessie_3/img/rot.jpg" />
 				<Compiler>
 					<Add option="-g" />
 					<Add directory="include" />
