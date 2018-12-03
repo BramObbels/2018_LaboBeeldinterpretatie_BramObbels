@@ -11,7 +11,7 @@
 				<Option object_output="obj/Debug/" />
 				<Option type="1" />
 				<Option compiler="gcc" />
-				<Option parameters="-aardbei1=/home/student/2018_LaboBeeldinterpretatie_BramObbels/sessie_5/img/strawberry1.tif -aardbei2=/home/student/2018_LaboBeeldinterpretatie_BramObbels/sessie_5/img/strawberry2.tif" />
+				<Option parameters="-aardbei1=/home/bram/2018_LaboBeeldinterpretatie_BramObbels/sessie_5/img/strawberry1.tif -aardbei2=/home/bram/2018_LaboBeeldinterpretatie_BramObbels/sessie_5/img/strawberry2.tif" />
 				<Compiler>
 					<Add option="-g" />
 					<Add directory="include" />
