@@ -1,5 +1,5 @@
 #include <opencv2/opencv.hpp>
-#include <opencv2/features2d/features2d.hpp>
+//#include <opencv2/features2d/features2d.hpp>
 #include <opencv2/features2d.hpp>
 #include <opencv2/imgcodecs.hpp>
 #include <opencv2/imgproc/imgproc_c.h>
@@ -52,14 +52,14 @@ int main(int argc, const char ** argv){
     cout << face << std::endl;
     cout << person << std::endl;
 
-    VideoCapture gezicht_cap(face);
-    VideoCapture persoon_cap(person);
+    VideoCapture gezicht_cap(face); //videocapture
+    VideoCapture persoon_cap(person); //videocapture
 
     Mat gezicht;
     Mat persoon;
 
-    gezicht_cap >> gezicht;
-    persoon_cap >> persoon;
+    gezicht_cap >> gezicht; //eerste frame
+    persoon_cap >> persoon; //eerste frame
 
     ///_____________TESTEN OF IMAGES CORRECT INGELADEN ZIJN________________
     if(!gezicht_cap.isOpened()){
@@ -93,19 +93,17 @@ int main(int argc, const char ** argv){
     ///////////////////////////////////////////////////////////////////////////////////
     /*
 
-    Sessie 5 - Machine Learning
+   Sessie 6 - Object Detection
 
-    Een aardbei plukker wil graag mee gaan met de tijd en wil zijn manuele arbeid reduceren. Hiervoor heeft hij aan ons gevraag om een automatische aarbei-pluk machine te bouwen, die in staat is rijpe aardbeien te onderscheiden van onrijpe aardbeien. In dit labo gaan jullie proberen om met behulp van machine learning rijpe aarbeien te detecteren.
+    In dit labo gaan we 2 verschillende soorten object detectors gebruiken om eerst gezichten te vinden. Daarna gebruiken we een andere detector om personen te vinden.
 
-    Opdracht 1: Maak een interface waarop je op basis van mouse callbacks pixels kan aanklikken. Bij links klikken, sla je een extra punt op. Rechts klikken verwijder je het laatst toegevoegde punt. En waarbij de middelste knop een lijst toont met alle opgeslagen punten.
+    Opdracht 1: Maak een interface waarin je de fases.mp4 video kan afspelen, daarna gebruik je het Viola en Jones detectie algoritme om met het HAAR face model gezichten in elk frame te vinden. Duid deze aan met een cirkel en een detectie score.
 
-    Opdracht 2: Op basis van de geselecteerd punten bepaalje een descriptor, in dit geval de HSV representatie van de pixel.
+    Opdracht 2: Detecteer nu niet enkel met het HAAR face model, maar ook het LBP model. Wat merk je van verschillen?
 
-    Opdracht 3: Train met deze data een K-Nearest-Neighbor classifier, een Normal Bayes Classifier en een Support Vector Machine
+    Opdracht 3: Maak nu een ander project waarin we dezelfde interface hebben, maar met de people.mp4 video. Hierin moet je personen vinden gebruikmakende van de HOG+SVM pedestrian detector.
 
-    Opdracht 4: Classificeer de pixels van de afbeelding met deze technieken en visualiseer met een masker de resterende pixels.
-
-    EXTRA: Hoe kan je de segmentatie verbeteren? Denk na over het feit dat een rijpe aarbei meer rood en minder groen componenten geven.
+    EXTRA: Kan je ook per persoon zijn/haar traject in de video bijhouden?
 
     */
 
@@ -113,7 +111,8 @@ int main(int argc, const char ** argv){
     CascadeClassifier detectorLBP(LBP_model);
 
 
-    ///_________________________________OPDRACHT 1_____________________________________
+    ///_________________________________OPDRACHT 1 en 2_____________________________________
+    ///antwoord op de vraag: Haarfeatures zijn preciezer dan LBP maar LBP is sneller;
     while(1){
         // Capture frame-by-frame
         gezicht_cap >> gezicht;
@@ -125,23 +124,23 @@ int main(int argc, const char ** argv){
 
 
 
-        Mat canvas = gezicht.clone();
+        Mat canvas = gezicht.clone(); //canvas om op te tekenen
 
-        Mat tempHaar = gezicht.clone();
-        Mat tempLBP = gezicht.clone();
+        Mat tempHaar = gezicht.clone(); //clone voor detectie later
+        Mat tempLBP = gezicht.clone(); //clone voor detectie later
 
-        vector<Rect> objectHAAR, objectLBP;
-        vector<int> scoreHAAR, scoreLBP;
+        vector<Rect> objectHAAR, objectLBP; // vector waar boundingboxes uit detectie worden bewaard
+        vector<int> scoreHAAR, scoreLBP; // vector waar boundingboxes uit detectie worden bewaard
 
-        detectorHAAR.detectMultiScale(tempHaar, objectHAAR, scoreHAAR, 1.05, 3);
-        detectorLBP.detectMultiScale(tempLBP, objectLBP, scoreLBP, 1.05, 3);
+        detectorHAAR.detectMultiScale(tempHaar, objectHAAR, scoreHAAR, 1.05, 3); //detectie uitvoeren
+        detectorLBP.detectMultiScale(tempLBP, objectLBP, scoreLBP, 1.05, 3); //detectie uitvoeren
 
-        for(int i = 0; i<objectHAAR.size(); i++){
+        for(int i = 0; i<objectHAAR.size(); i++){ // voor elk gevonden object tekenen we de boundingbox/cirkel en de score
             string score = to_string(scoreHAAR[i]);
             putText(canvas,score,Point(objectHAAR[i].x, objectHAAR[i].y),FONT_HERSHEY_PLAIN, 3,  Scalar(255,0,0));
             circle(canvas, Point(objectHAAR[i].x+objectHAAR[i].height/2, objectHAAR[i].y+objectHAAR[i].height/2), objectHAAR[i].height/2, Scalar(255,0,0), 2);
         }
-        for(int i = 0; i<objectLBP.size(); i++){
+        for(int i = 0; i<objectLBP.size(); i++){ // voor elk gevonden object tekenen we de boundingbox/cirkel en de score
             string score = to_string(scoreLBP[i]);
             putText(canvas,score,Point(objectLBP[i].x+objectLBP[i].width, objectLBP[i].y+objectLBP[i].height),FONT_HERSHEY_PLAIN, 3,  Scalar(0,255,0));
             rectangle(canvas,objectLBP[i],Scalar(0,255,0),2);
@@ -149,6 +148,41 @@ int main(int argc, const char ** argv){
 
         // Display the resulting frame
         imshow( "Frame", canvas );
+        // Press  ESC on keyboard to exit
+        char c=(char)waitKey(25);
+        if(c==27)
+            break;
+    }
+
+    ///_________________________________OPDRACHT 3_____________________________________
+    HOGDescriptor hogdesc; //hogdetector
+    hogdesc.setSVMDetector(HOGDescriptor::getDefaultPeopleDetector()); //standaard hogdescriptor voor personen inladen
+
+    while(1){
+        // Capture frame-by-frame
+        persoon_cap >> persoon;
+
+        // If the frame is empty, break immediately
+        if (persoon.empty())
+            break;
+        //we herschalen het frame omdat in het begin de persoon te klein is voor detectie;
+        resize(persoon, persoon, Size(1.5*persoon.cols, 1.5*persoon.rows));
+
+        Mat persooncl = persoon.clone(); // clone voor detectiefuncitie
+        Mat persooncavas = persoon.clone(); // canvas om op te tekenen
+
+        vector<Rect> personen; //gevonden boundingboxen van person
+        vector<double> gewichten; //bijbehorende scores
+
+        hogdesc.detectMultiScale(persooncl, personen, gewichten); //detectie uitvoeren in verschillende grotes
+        for(int i=0; i<personen.size(); i++){ //tekenen van boundingboxen en score
+            if(gewichten[i] >= 1.0){
+                string score = to_string(gewichten[i]);
+                putText(persooncavas,score,Point(personen[i].x, personen[i].y),FONT_HERSHEY_PLAIN, 3,  Scalar(0,255,0));
+                rectangle(persooncavas, Rect(Point(personen[i].x, personen[i].y),Point(personen[i].x + personen[i].width, personen[i].y + personen[i].height)), Scalar(0,255, 0));
+            }
+        }
+        imshow("walking_capture", persooncavas ); //toon canvas
         // Press  ESC on keyboard to exit
         char c=(char)waitKey(25);
         if(c==27)

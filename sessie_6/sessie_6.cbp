@@ -11,7 +11,7 @@
 				<Option object_output="obj/Debug/" />
 				<Option type="1" />
 				<Option compiler="gcc" />
-				<Option parameters="-face=/home/student/2018_LaboBeeldinterpretatie_BramObbels/sessie_6/img/faces.mp4  -person=/home/student/2018_LaboBeeldinterpretatie_BramObbels/sessie_6/img/people.mp4 -HAAR_model=/home/student/2018_LaboBeeldinterpretatie_BramObbels/sessie_6/models/haarcascade_frontalface_alt.xml -LBP_model=/home/student/2018_LaboBeeldinterpretatie_BramObbels/sessie_6/models/lbpcascade_frontalface_improved.xml" />
+				<Option parameters="-face=/home/bram/2018_LaboBeeldinterpretatie_BramObbels/sessie_6/img/faces.mp4  -person=/home/bram/2018_LaboBeeldinterpretatie_BramObbels/sessie_6/img/people.mp4 -HAAR_model=/home/bram/2018_LaboBeeldinterpretatie_BramObbels/sessie_6/models/haarcascade_frontalface_alt.xml -LBP_model=/home/bram/2018_LaboBeeldinterpretatie_BramObbels/sessie_6/models/lbpcascade_frontalface_improved.xml" />
 				<Compiler>
 					<Add option="-g" />
 					<Add directory="include" />
