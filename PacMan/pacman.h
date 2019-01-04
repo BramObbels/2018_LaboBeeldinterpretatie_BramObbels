@@ -10,8 +10,10 @@ struct selectRectParams{
     Point current_mouse_location = Point(0,0);
     vector<Point> selectie_punten;
 };
-Rect SCORE_GEBIED = Rect(109, 10, 63, 14);
-Rect TOP_SCORE_GEBIED = Rect(198, 10, 84, 14);
+
+
+Rect SCORE_GEBIED = Rect(109, 9, 63, 14);
+Rect TOP_SCORE_GEBIED = Rect(198, 9, 84, 14);
 Rect SPEELVELD_GEBIED = Rect(99, 26, 280, 313);
 Rect LEVENS_GEBIED = Rect(121, 340, 99, 20);
 Rect SLEUTELS_GEBIED = Rect(220, 340, 150, 20);

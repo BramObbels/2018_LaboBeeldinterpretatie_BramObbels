@@ -8,6 +8,7 @@
 #include <iostream>
 #include "pacman.h"
 #include "TitleTabs.h"
+#include "digit.h"
 
 using namespace std;
 using namespace cv;
@@ -20,6 +21,8 @@ vector<Point> selectPoins(Mat);
 Mat getExampleFromStream(VideoCapture);
 void getDigits(VideoCapture);
 void showInit(Mat);
+int getNumber(Mat);
+vector<int> meerdere_detectie(Mat, Mat);
 
 
 
@@ -144,9 +147,10 @@ int main(int argc, const char ** argv){
         TAB.removeTitle();
     }
 
-    getDigits(frame_capture);
     int aantal_levens;
     int aantal_sleutels;
+    int score;
+    int top_score;
     Mat score_frame = Mat(frame.clone(),SCORE_GEBIED);
     Mat top_score_frame = Mat(frame.clone(),TOP_SCORE_GEBIED);
     Mat levens_frame = Mat(frame.clone(),LEVENS_GEBIED);
@@ -155,10 +159,6 @@ int main(int argc, const char ** argv){
 
 
     TAB.addTitle("RUNNING GAME");
-
-
-    //goede_punten = selectPoins(frame.clone());
-    //slechte_punten = selectPoins(frame.clone());
 
     while(1){
         // Capture frame-by-frame
@@ -176,9 +176,15 @@ int main(int argc, const char ** argv){
 
         aantal_levens = countContours(levens_frame);
         aantal_sleutels = countContours(sleutels_frame);
+
+        score = getNumber(score_frame.clone());
+        top_score = getNumber(top_score_frame.clone());
+
+        cout << TAB.getShort()<< "________________________________________" << aantal_levens << endl;
         cout << TAB.getShort()<< "LEVENS: " << aantal_levens << endl;
         cout << TAB.getShort()<< "SLEUTELS: " << aantal_sleutels << endl;
-
+        cout << TAB.getShort()<< "SCORE: " << score << endl;
+        cout << TAB.getShort()<< "TOPSCORE: " << top_score << endl;
 
         Mat canvas = frame.clone(); //canvas om op te tekenen
         imshow("frame", frame);
@@ -441,4 +447,83 @@ void getDigits(VideoCapture stream){
     }
     destroyWindow("getalen opslaan");
 }
+
+int getNumber(Mat beeld){
+    int getalwaarde;
+    string path;
+    Mat templ;
+    vector<int> digit_positions;
+    digit_number dn;
+    for(int i = 0; i < 10; i++){
+        path = "";
+        path.append(VOORBEELDEN_MAP);
+        path.append("/");
+        path.append(to_string(i));
+        path.append(".jpg");
+        templ = imread(path);
+        //imshow(path,templ);
+        digit_positions = meerdere_detectie(beeld, templ);
+        //cout << i << ": X" << digit_positions.size() << endl;
+
+        for(int j = 0; j < digit_positions.size(); j++){
+            digit d;
+            d.waarde = i;
+            d.x_positie = digit_positions[j];
+            dn.addDigit(d);
+        }
+    }
+    dn.bubble();
+    getalwaarde = dn.getInt();
+    return getalwaarde;
+    //cout << getalwaarde << endl;
+}
+
+vector<int> meerdere_detectie(Mat beeld, Mat templ){
+    vector<int> digit_posities;
+    Mat canvas = beeld.clone();
+    Mat template_gray;
+    Mat image_gray;
+    Mat match_result;
+
+    double minimum;
+    double maximum;
+
+    double thresholdwaarde = 0.8;
+
+    cvtColor(templ, template_gray, COLOR_BGR2GRAY);    // afbeelding omzettten naar grijswaarde
+    cvtColor(beeld, image_gray, COLOR_BGR2GRAY);    // afbeelding omzettten naar grijswaarde
+
+    // vind een heatmap dat de beste corelaties met het template weergeeft
+    matchTemplate(image_gray, template_gray, match_result, TM_CCORR_NORMED);
+    Mat match_result_thres = match_result.clone();
+    match_result_thres = (match_result_thres>0.95)*255;
+    ///imshow("x", match_result_thres);
+    ///normalize(match_result, match_result, 0, 1, NORM_MINMAX, -1, Mat()); //normalizeer
+    //vind de minimum en en maximum waarde maximum in deze heatmap
+    //minMaxLoc(match_result, &minimum, &maximum);
+    //trhreshold aan de hand van dit maximum
+    //Mat match_result_threshold = Mat::zeros(Size(beeld.cols, beeld.rows), CV_32FC1);
+    //inRange(match_result, maximum * thresholdwaarde, maximum, match_result_threshold);
+    //match_result_threshold.convertTo(match_result_threshold, CV_8UC1);
+
+    vector<vector<Point>> contouren;
+    findContours(match_result_thres, contouren, RETR_EXTERNAL, CHAIN_APPROX_NONE);
+    for(int i = 0; i < contouren.size(); i++){
+        //vind een vierkant dat rond de contour past
+        vector<Point> hulls;
+        convexHull(contouren[i], hulls);
+        Rect rect = boundingRect(hulls);
+        //vind het locale maximum van het template resultaat maar dan binnen deze vierkant
+        Point locatie;
+        minMaxLoc(match_result(rect), NULL, NULL, NULL, &locatie);
+        //teken rond punt een vrierkant even groot als het template beeld
+        Point p(locatie.x + rect.x, locatie.y + rect.y);
+        digit_posities.push_back(p.x);
+        //rectangle(canvas, p, Point(p.x + templ.cols, p.y + templ.rows), Scalar(0, 255, 0));
+    }
+    //imshow("matches", canvas);
+
+    return digit_posities;
+}
+
 

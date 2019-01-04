@@ -1,5 +1,5 @@
 # depslib dependency file v1.0
-1546559487 source:/home/bram/2018_LaboBeeldinterpretatie_BramObbels/PacMan/main.cpp
+1546636684 source:/home/bram/2018_LaboBeeldinterpretatie_BramObbels/PacMan/main.cpp
 	<opencv2/opencv.hpp>
 	<opencv2/features2d.hpp>
 	<opencv2/imgcodecs.hpp>
@@ -9,6 +9,7 @@
 	<iostream>
 	"pacman.h"
 	"TitleTabs.h"
+	"digit.h"
 
 1523477173 /usr/local/include/opencv2/opencv.hpp
 	"opencv2/opencv_modules.hpp"
@@ -762,7 +763,7 @@
 1523477174 /usr/local/include/opencv2/highgui/highgui.hpp
 	"opencv2/highgui.hpp"
 
-1546558696 /home/bram/2018_LaboBeeldinterpretatie_BramObbels/PacMan/pacman.h
+1546632019 /home/bram/2018_LaboBeeldinterpretatie_BramObbels/PacMan/pacman.h
 	<opencv2/opencv.hpp>
 	<vector>
 	<string>
@@ -774,4 +775,7 @@
 
 1546375194 source:/home/bram/2018_LaboBeeldinterpretatie_BramObbels/PacMan/pacman.cpp
 	"pacman.h"
+
+1546636468 /home/bram/2018_LaboBeeldinterpretatie_BramObbels/PacMan/digit.h
+	<vector>
 
