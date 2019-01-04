@@ -17,7 +17,6 @@
 				</Compiler>
 				<Linker>
 					<Add option="`pkg-config opencv --libs`" />
-					<Add option="`pkg-config --cflags opencv`" />
 				</Linker>
 			</Target>
 			<Target title="Release">
@@ -39,8 +38,9 @@
 		<Linker>
 			<Add option="`pkg-config opencv --libs`" />
 		</Linker>
+		<Unit filename="TitleTabs.h" />
 		<Unit filename="main.cpp" />
-		<Unit filename="main.h" />
+		<Unit filename="pacman.h" />
 		<Extensions>
 			<code_completion />
 			<debugger />
