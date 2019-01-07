@@ -1,7 +1,9 @@
 #ifndef DIGIT_H_INCLUDED
 #define DIGIT_H_INCLUDED
 
-#include <vector>;
+#include <vector>
+
+using namespace std;
 
 struct digit{
     int x_positie = 0;
