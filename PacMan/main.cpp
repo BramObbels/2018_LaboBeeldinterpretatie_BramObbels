@@ -1,10 +1,6 @@
 #include <opencv2/opencv.hpp>
-//#include <opencv2/features2d/features2d.hpp>
-#include <opencv2/features2d.hpp>
-#include <opencv2/imgcodecs.hpp>
 #include <opencv2/imgproc/imgproc_c.h>
 #include "opencv2/highgui/highgui.hpp"
-#include <opencv2/ml.hpp>
 #include <iostream>
 #include "pacman.h"
 #include "TitleTabs.h"
@@ -23,10 +19,30 @@ void getDigits(VideoCapture);
 void showInit(Mat);
 int getNumber(Mat);
 vector<int> meerdere_detectie(Mat, Mat);
+Vec3b getColor(VideoCapture);
+void initKleuren(string);
+Point getPosOfBiggestColourBlob(Mat frame, Vec3b s, int range);
+
+bool compareContourAreas ( std::vector<cv::Point> contour1, std::vector<cv::Point> contour2 ) {
+    double i = fabs( contourArea(cv::Mat(contour1)) );
+    double j = fabs( contourArea(cv::Mat(contour2)) );
+    return ( i < j );
+}
 
 
 
 TitleTabs TAB;
+
+void getPoint(int event, int x, int y, int flags, void* data){
+    Point* p = (Point*)data;
+    if  ( event == EVENT_LBUTTONDOWN )
+    {
+        p->x = x;
+        p->y = y;
+        cout << TAB.getShort() << "nieuw punt geselecteerd" << endl;
+    }
+
+}
 
 
 void fillPointVector(int event, int x, int y, int flags, void* data)
@@ -80,6 +96,10 @@ void SelectRectPoints(int event, int x, int y, int flags, void* data)
 
 int main(int argc, const char ** argv){
 
+    KLEUR_PACMAN[0] = (char)8;
+    KLEUR_PACMAN[1] = (char)254;
+    KLEUR_PACMAN[2] = (char)251;
+
     //////////////////////////////////////////////////////////////////////////////////////
     ////                                 SETUP                                         ///
     //////////////////////////////////////////////////////////////////////////////////////
@@ -131,12 +151,20 @@ int main(int argc, const char ** argv){
     imshow("frame", frame);
 
     TAB.addTitle("INITIALISATIE");
-    cout << TAB.getShort() << "Opnieuw Initialiseren van Gebieden en Nodige Kleurwaarden?: YES = y,  NO = n" << endl;
+    cout << TAB.getShort() << "Opnieuw Initialiseren van Gebieden: YES = y,  NO = n" << endl;
     showInit(frame);
     char c=(char)waitKey(0);
     if(c=='y'){
         TAB.addTitle("GEBIEDEN_SELECTEREN");
         init(video);
+        TAB.removeTitle();
+    }
+    cout << TAB.getShort() << "Opnieuw Initialiseren van Nodige Kleurwaarden?: YES = y,  NO = n" << endl;
+    showInit(frame);
+    c=(char)waitKey(0);
+    if(c=='y'){
+        TAB.addTitle("KLEUREN_SELECTEREN");
+        initKleuren(video);
         TAB.removeTitle();
     }
     cout << TAB.getShort() << "Opnieuw Selecteren van templates voor de getallen?: YES = y,  NO = n" << endl;
@@ -151,6 +179,8 @@ int main(int argc, const char ** argv){
     int aantal_sleutels;
     int score;
     int top_score;
+    Point pacman_positie;
+
     Mat score_frame = Mat(frame.clone(),SCORE_GEBIED);
     Mat top_score_frame = Mat(frame.clone(),TOP_SCORE_GEBIED);
     Mat levens_frame = Mat(frame.clone(),LEVENS_GEBIED);
@@ -180,11 +210,16 @@ int main(int argc, const char ** argv){
         score = getNumber(score_frame.clone());
         top_score = getNumber(top_score_frame.clone());
 
+        pacman_positie = getPosOfBiggestColourBlob(speelveld_frame, KLEUR_PACMAN, KLEUREN_RANGE);
+
+
         cout << TAB.getShort()<< "________________________________________" << aantal_levens << endl;
         cout << TAB.getShort()<< "LEVENS: " << aantal_levens << endl;
         cout << TAB.getShort()<< "SLEUTELS: " << aantal_sleutels << endl;
         cout << TAB.getShort()<< "SCORE: " << score << endl;
         cout << TAB.getShort()<< "TOPSCORE: " << top_score << endl;
+        cout << TAB.getShort()<< "PACMAN POSITIE: " <<  "x: "<< pacman_positie.x << endl;
+
 
         Mat canvas = frame.clone(); //canvas om op te tekenen
         imshow("frame", frame);
@@ -195,6 +230,46 @@ int main(int argc, const char ** argv){
             break;
     }
     return 0;
+}
+
+void initKleuren(string videopath){
+    VideoCapture capture(videopath); //videocapture
+    TAB.addTitle("STAP_1");
+    cout << TAB.getFull() << "SELECTEER EEN KLEURENPIXEL VAN PACMAN"<<endl;
+    Vec3b kleur = getColor(capture);
+    cout << (int)kleur[0] << "  " << (int)kleur[1] << "  " << (int)kleur[2] << endl;
+    KLEUR_PACMAN = kleur;
+}
+
+Point getPosOfBiggestColourBlob(Mat frame, Vec3b s, int range){
+    int B = (int)s[0];
+    int G = (int)s[1];
+    int R = (int)s[2];
+    Mat masker;
+    int max_B = min(B+range, 255);
+    int max_G = min(G+range, 255);
+    int max_R = min(R+range, 255);
+
+    int min_B = max(0,B-range);
+    int min_G = max(0,G-range);
+    int min_R = max(0,R-range);
+
+    inRange(frame, Scalar(min_B, min_G, min_R), Scalar(max_B, max_G, max_R), masker); //segmentatie van rood voor 180 graden
+    imshow("masker", masker);
+    dilate(masker, masker, Mat(), Point(-1, -1), 3, 1, 1);
+    vector<vector<Point>> contours;
+    findContours(masker, contours, RETR_EXTERNAL, CHAIN_APPROX_NONE);
+    Point p = Point(0,0);
+    if(contours.size()>0){
+        sort(contours.begin(), contours.end(), compareContourAreas);
+        vector<Point> bigest = contours[contours.size()-1];
+        vector<Point> contours_poly;
+        Rect boundRect;
+        approxPolyDP( Mat(bigest), contours_poly, 3, true );
+        boundRect = boundingRect( Mat(contours_poly) );
+        p = Point(boundRect.x + boundRect.width/2, boundRect.y + boundRect.height/2);
+    }
+    return p;
 }
 
 void init(string videopath){
@@ -232,7 +307,7 @@ void init(string videopath){
     cout << TAB.getFull() << "SELECTEER KLEURPIXEL VAN HET RODE SPOOKJE"<<endl;
     //vector<Point> spookje_1_kleur = selectPoins(initialisatie_frame);
 
-    TAB = TitleTabs();
+    //TAB = TitleTabs();
 
 
     //TAB.removeTitle();
@@ -394,6 +469,36 @@ void showInit(Mat frame){
     rectangle(canvas, SLEUTELS_GEBIED, Scalar(255,255,0), 1, 8, 0);
     imshow("init settings",canvas);
     waitKey(0);
+}
+
+Vec3b getColor(VideoCapture stream){
+    Mat frame;
+    Mat gevonden;
+    cout << TAB.getShort() << "druk op de (a) toets voor het volgende frame" << endl;
+    cout << TAB.getShort() << "selecteer een punt door te klikken" << endl;
+    cout << TAB.getShort() << "druk op de (esc) om verder te gaan" << endl;
+    stream >> frame;
+    Mat canvas = frame.clone();
+
+    namedWindow("selecteer kleur in video");
+    Point punt;
+    setMouseCallback("selecteer kleur in video", getPoint, &punt);
+
+
+    while(true){
+
+        imshow("selecteer kleur in video", frame);
+
+        char c=(char)waitKey(25);
+        if(c==27){
+            break;
+        }
+        if(c=='a'){
+            cout << TAB.getShort() <<"Next Frame" << endl;
+            stream >> frame;
+        }
+    }
+    return frame.at<Vec3b>(punt);
 }
 
 void getDigits(VideoCapture stream){
